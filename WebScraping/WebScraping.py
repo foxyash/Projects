@@ -245,7 +245,7 @@ class WebScraping:
             s.login(msg['From'], password)
             s.sendmail(msg['From'], [msg['To']], msg.as_string())
             s.quit()
-            print('E-mail enviado com sucesso!')
+            print('E-mail enviado com sucesso!') 
         except Exception as e:
             print(f'Erro ao enviar o e-mail! {e}')
         
