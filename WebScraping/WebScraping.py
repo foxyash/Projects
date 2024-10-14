@@ -163,7 +163,7 @@ class WebScraping:
 
 # aqui ele compara os dados que não estão na lista de palavras ignoradas, assim verificando se o mesmo contém o nome ou numero da empresa no banco (planilha) e se caso n tenha, armazena no dicionario novamente
     def comparar_dados(self):
-        telefones_existentes = pd.read_excel('C:/Users/SAMSUNG/Desktop/Ciencia de dados/Jumori/WebScraping/telefones.xlsx')
+        telefones_existentes = pd.read_excel('C:/Users/SAMSUNG/Desktop/XXXXXX/XXXXX/WebScraping/telefones.xlsx')
 
         telefones_existentes['TELEFONE1'] = telefones_existentes['TELEFONE1'].astype(str).apply(lambda x: re.sub(r'\D', '', x))
         telefones_existentes['RAZAOSOCIAL'] = telefones_existentes['RAZAOSOCIAL'].astype(str).str.lower().str.strip()  
