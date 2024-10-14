@@ -19,7 +19,7 @@ import re
 from fuzzywuzzy import fuzz
 
 
-palavras_ignoradas = ['ar condicionado', 'refrigeração', 'refrigeracao', 'ar', 'ar-condicionado', 'oficina', 'mecanica', 'automotiva', 'automtoivo', 'ltda', 'me', 's/a', 'eireli', 'inc', 'corp', 'sa']
+palavras_ignoradas = ['ar condicionado', 'refrigeração', '-', 'refrigeracao', 'ar', 'ar-condicionado', 'oficina', 'mecanica', 'automotiva', 'automotivo', 'ltda', 'me', 's/a', 'eireli', 'inc', 'corp', 'sa']
 
 
 class WebScraping:
@@ -80,8 +80,12 @@ class WebScraping:
 
     def raspar_clientes(self):
         action = ActionChains(self.driver)
+        elementos_anterior = 0  
+        tentativas_sem_novos_elementos = 0  
+        max_tentativas_sem_novos_elementos = 5  
+
         try:
-            a = WebDriverWait(self.driver, 30).until(
+            elementos_visiveis = WebDriverWait(self.driver, 30).until(
                 EC.presence_of_all_elements_located((By.CLASS_NAME, "hfpxzc"))
             )
         except Exception as e:
@@ -90,43 +94,54 @@ class WebScraping:
             return
 
         while True:  
-            print(len(a))
-            var = len(a)
+            print(f"Número de elementos carregados: {len(elementos_visiveis)}")
             
-            if a:
-                scroll_origin = ScrollOrigin.from_element(a[len(a) - 1])
+            if elementos_visiveis:
+                scroll_origin = ScrollOrigin.from_element(elementos_visiveis[len(elementos_visiveis) - 1])
                 action.scroll_from_origin(scroll_origin, 0, 1000).perform()
-                time.sleep(2)
+                time.sleep(3)  
 
+                # Verificar se o fim da lista foi atingido
                 try:
                     fim_lista = self.driver.find_element(By.XPATH, "//span[contains(text(), 'Você chegou ao final da lista.')]")
                     if fim_lista:
                         print("Fim da lista encontrado. Parando a rolagem.")
-                        break  
-                except Exception as e:
+                        break 
+                except Exception:
                     print("Ainda não chegou ao fim da lista...")
 
+                # Esperar novos elementos serem carregados
                 try:
-                    a = WebDriverWait(self.driver, 30).until(
+                    elementos_visiveis_novo = WebDriverWait(self.driver, 30).until(
                         EC.presence_of_all_elements_located((By.CLASS_NAME, "hfpxzc"))
                     )
+                    
+                    # Verificar se novos elementos foram carregados
+                    if len(elementos_visiveis_novo) == len(elementos_visiveis): 
+                        tentativas_sem_novos_elementos += 1
+                        if tentativas_sem_novos_elementos >= max_tentativas_sem_novos_elementos:
+                            print("Nenhum novo elemento carregado após várias tentativas. Parando.")
+                            break
+                    else:
+                        tentativas_sem_novos_elementos = 0  
+                        elementos_visiveis = elementos_visiveis_novo  
+
                 except Exception as e:
                     print(f"Erro ao carregar mais elementos: {e}")
                     break
 
-                if len(a) == var:
-                    break
             else:
                 print("Nenhum elemento encontrado!")
                 break
 
-        for i in range(len(a)):
-            scroll_origin = ScrollOrigin.from_element(a[i])
+        # Processar os elementos coletados
+        for i in range(len(elementos_visiveis)):
+            scroll_origin = ScrollOrigin.from_element(elementos_visiveis[i])
             action.scroll_from_origin(scroll_origin, 0, 100).perform()
-            action.move_to_element(a[i]).perform()
+            action.move_to_element(elementos_visiveis[i]).perform()
 
             try:
-                self.driver.execute_script("arguments[0].click();", a[i])
+                self.driver.execute_script("arguments[0].click();", elementos_visiveis[i])
             except Exception as e:
                 print(f"Erro ao clicar no elemento: {e}")
                 continue
@@ -154,6 +169,7 @@ class WebScraping:
                 print(f"Erro ao coletar dados do elemento: {e}")
                 continue
 
+
 # aqui ele faz o tratamento do nome da empresa retornado, removendo espaços, transformando em string e verficando se alguma dessas palavras estão na lista de palavras ignoradas 
     def limpar_nome(self, nome):
         nome_limpo = re.sub(r'[^\w\s]', '', nome.lower().strip())
@@ -163,7 +179,7 @@ class WebScraping:
 
 # aqui ele compara os dados que não estão na lista de palavras ignoradas, assim verificando se o mesmo contém o nome ou numero da empresa no banco (planilha) e se caso n tenha, armazena no dicionario novamente
     def comparar_dados(self):
-        telefones_existentes = pd.read_excel('C:/Users/SAMSUNG/Desktop/XXXXXX/XXXXX/WebScraping/telefones.xlsx')
+        telefones_existentes = pd.read_excel('C:/Users/SAMSUNG/Desktop/Ciencia de dados/Jumori/WebScraping/telefones.xlsx')
 
         telefones_existentes['TELEFONE1'] = telefones_existentes['TELEFONE1'].astype(str).apply(lambda x: re.sub(r'\D', '', x))
         telefones_existentes['RAZAOSOCIAL'] = telefones_existentes['RAZAOSOCIAL'].astype(str).str.lower().str.strip()  
@@ -212,9 +228,9 @@ class WebScraping:
         """
         msg =  MIMEMultipart()
         msg['Subject'] = 'Lista de Clientes'
-        msg['From'] = 'mailto:emailteste@gmail.com'
+        msg['From'] = 'mailto:gabrielsandovaljumori@gmail.com'
         msg['To'] = self.nome_email
-        password = 'password'
+        password = 'acdp enzz fkgh psgu'
 
         msg.attach(MIMEText(corpo_email, _subtype='html',))
 
