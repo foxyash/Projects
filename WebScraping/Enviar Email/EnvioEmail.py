@@ -1,4 +1,5 @@
-# utilize pip install e o nome de cada lib abaixo para que o software funcione. ex: pip install smtplib
+# pip install -r requirements.txt
+
 import smtplib
 import pandas as pd
 from email.mime.multipart import MIMEMultipart
