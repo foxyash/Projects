@@ -25,7 +25,7 @@ for index, linha in servicos_jumori.iterrows():
         msg['Subject'] = 'Serviços Jumori no PRAZO de 1 ano.'
         msg['From'] = 'mailto:gabrielsandovaljumori@gmail.com'
         msg['To'] =  'gabriel.sandoval@jumori.com.br' #'leonardo.reis@jumori.com.br' #
-        password = 'acdp enzz fkgh psgu'
+        password = 'password'
 
         msg.attach(MIMEText(corpo_email, _subtype='html',))
 
