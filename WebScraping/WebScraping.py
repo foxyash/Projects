@@ -230,7 +230,7 @@ class WebScraping:
         msg['Subject'] = 'Lista de Clientes'
         msg['From'] = 'mailto:gabrielsandovaljumori@gmail.com'
         msg['To'] = self.nome_email
-        password = 'acdp enzz fkgh psgu'
+        password = 'password'
 
         msg.attach(MIMEText(corpo_email, _subtype='html',))
 
