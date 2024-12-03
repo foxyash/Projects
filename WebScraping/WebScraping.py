@@ -19,13 +19,16 @@ import re
 from fuzzywuzzy import fuzz
 
 
-palavras_ignoradas = ['ar condicionado', 'refrigeração', '-', 'refrigeracao', 'ar', 'ar-condicionado', 'oficina', 'mecanica', 'automotiva', 'automotivo', 'ltda', 'me', 's/a', 'eireli', 'inc', 'corp', 'sa']
-
+palavras_ignoradas = ['ar condicionado', 'ar veicular', 'ar condicionado veicular' 'Ar condicionado', 'refrigeração', '-', 'refrigeracao', 'ar', 'ar-condicionado', 'oficina', 'mecanica', 'automotiva', 'automotivo', 'ltda', 'me', 's/a', 'eireli', 'inc', 'corp', 'sa']
 
 class WebScraping:
     def __init__(self):
+        self.dados = {}
+
+    def iniciar_navegador(self):
         options = webdriver.ChromeOptions()
         options.add_argument('--headless=new')
+        options.add_argument("--log-level=3")
         options.add_experimental_option('prefs', {'intl.accept_languages': 'en_US'})
         options.add_argument('--disable-notifications')
         options.add_argument("--no-sandbox")
@@ -35,34 +38,45 @@ class WebScraping:
         service = webdriver.ChromeService(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(options=options, service=service)
         self.driver.get("https://www.google.com.br/maps")
-        self.dados = {}
-
 # inicia as classes 
 
     def iniciar_classes(self):
-        self.coletar_email_usuario()
-        self.navegar_maps()
-        self.raspar_clientes()
-        self.comparar_dados()
-        self.criar_planilha(self.dados)
-        self.enviar_email_usuario()
+        cidades = [
+            'Petrolina', 'Parauapebas', 'Altamira', 'Balsas', 'Bom Jesus', 'São Raimundo Nonato',
+            'Corumbá', 'Belém', 'Redenção', 'Teresina', 'Londrina'
+            ]
+        for cidade in cidades:
+            print(f"Processando cidade: {cidade}")
+            self.iniciar_navegador()
+            try:
+                self.navegar_maps(cidade)
+                self.raspar_clientes()
+                if self.dados:
+                    self.criar_planilha(cidade)
+                    self.enviar_email_usuario()
+                    self.dados.clear()
+            except Exception as e:
+                print(f'Não foi possivel navegar {e}')
+            finally:
+                self.driver.quit()
 
 # coleta o e-mail do usuario, no qual será enviado a prospecção
 
-    def coletar_email_usuario(self):
-        self.nome_email =  input('Digite o e-mail que deseja receber a prospecção: ')
-        self.nome_email = self.nome_email.lower()
-        validar_email = re.search(r'^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+\.[a-zA-Z\.]{2,6}$', self.nome_email)
-        if validar_email:
-            print('Email válido!')
-        else:
-            print('Digite um e-mail válido!\n')
-            self.coletar_email_usuario()
+    # def coletar_email_usuario(self):
+    #     self.nome_email =  input('Digite o e-mail que deseja receber a prospecção: ')
+    #     self.nome_email = self.nome_email.lower()
+    #     validar_email = re.search(r'^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+\.[a-zA-Z\.]{2,6}$', self.nome_email)
+    #     if validar_email:
+    #         print('Email válido!')
+    #     else:
+    #         print('Digite um e-mail válido!\n')
+    #         self.coletar_email_usuario()
 
 # faz a navegação pelo maps buscando as informações necessárias para iniciar a raspagem
 
-    def navegar_maps(self):
-        self.pesquisar = input('Digite o que deseja pesquisar: ')
+    def navegar_maps(self, cidade):
+        self.cidadeEstado = cidade
+        self.pesquisar = f'Mecanica Automotiva Ar condicionado em {cidade} '
         try:
             campo_busca = WebDriverWait(self.driver, 30).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="searchboxinput"]')) #//*[@id="searchboxinput"] 
@@ -134,7 +148,7 @@ class WebScraping:
                 print("Nenhum elemento encontrado!")
                 break
 
-        # Processar os elementos coletados
+        # processar os elementos coletados
         for i in range(len(elementos_visiveis)):
             scroll_origin = ScrollOrigin.from_element(elementos_visiveis[i])
             action.scroll_from_origin(scroll_origin, 0, 100).perform()
@@ -169,7 +183,6 @@ class WebScraping:
                 print(f"Erro ao coletar dados do elemento: {e}")
                 continue
 
-
 # aqui ele faz o tratamento do nome da empresa retornado, removendo espaços, transformando em string e verficando se alguma dessas palavras estão na lista de palavras ignoradas 
     def limpar_nome(self, nome):
         nome_limpo = re.sub(r'[^\w\s]', '', nome.lower().strip())
@@ -182,13 +195,14 @@ class WebScraping:
         telefones_existentes = pd.read_excel('C:/Users/SAMSUNG/Desktop/Ciencia de dados/Jumori/WebScraping/telefones.xlsx')
 
         telefones_existentes['TELEFONE1'] = telefones_existentes['TELEFONE1'].astype(str).apply(lambda x: re.sub(r'\D', '', x))
-        telefones_existentes['RAZAOSOCIAL'] = telefones_existentes['RAZAOSOCIAL'].astype(str).str.lower().str.strip()  
+        telefones_existentes['NOMEFANTASIA'] = telefones_existentes['NOMEFANTASIA'].astype(str).str.lower().str.strip()  
 
 
         telefones_existentes_set = set(telefones_existentes['TELEFONE1'].tolist())
-        nomes_existentes_set = set(telefones_existentes['RAZAOSOCIAL'].apply(lambda x: self.limpar_nome(x)).tolist())  
+        nomes_existentes_set = set(telefones_existentes['NOMEFANTASIA'].apply(lambda x: self.limpar_nome(x)).tolist())  
 
         deletar_titulos = []
+
 
         for titulo, tel in self.dados.items():
             titulo_str = self.limpar_nome(str(titulo))  
@@ -208,14 +222,14 @@ class WebScraping:
 
 # aqui ele gera a planilha para mim, com os campos "nome" e "telefone", armazenando os dados em suas devidas colunas respectivamente
 
-    def criar_planilha(self, dados):
+    def criar_planilha(self, cidade):
         wb = Workbook()
         ws = wb.active
         ws.title = 'Prospecção'
         ws.append(['Nome', 'Telefone'])
-        for nome, telefone in dados.items():
+        for nome, telefone in self.dados.items():
             ws.append([nome, telefone])
-        self.arquivo_excel = 'Prospecção.xlsx'
+        self.arquivo_excel = f'Prospecção{self.cidadeEstado}.xlsx'
         wb.save(self.arquivo_excel)
         print(f'Salvo como: {self.arquivo_excel}!')
 
@@ -229,8 +243,8 @@ class WebScraping:
         msg =  MIMEMultipart()
         msg['Subject'] = 'Lista de Clientes'
         msg['From'] = 'mailto:gabrielsandovaljumori@gmail.com'
-        msg['To'] = self.nome_email
-        password = 'password'
+        msg['To'] = 'gabriel.sandoval@jumori.com.br'
+        password = 'acdp enzz fkgh psgu'
 
         msg.attach(MIMEText(corpo_email, _subtype='html',))
 
@@ -244,12 +258,12 @@ class WebScraping:
             s.starttls()
             s.login(msg['From'], password)
             s.sendmail(msg['From'], [msg['To']], msg.as_string())
+            # s.quit()
+            print('Email Enviado com Sucesso!')
             s.quit()
-            print('E-mail enviado com sucesso!') 
         except Exception as e:
             print(f'Erro ao enviar o e-mail! {e}')
-        
-        self.driver.quit()
+        # self.driver.quit()
 
 start = WebScraping()
 start.iniciar_classes()
